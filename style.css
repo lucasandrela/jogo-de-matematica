@@ -68,3 +68,22 @@ body { background: radial-gradient(circle at 20% 10%, #18202a 0, #080b10 38%, #0
 @keyframes reveal { from{opacity:0;transform:scale(.5) rotate(-20deg)} to{opacity:1;transform:scale(1) rotate(0)} }
 @media (max-width: 640px) { .case-file { max-width: 300px; } .portrait { height: 190px; } }
 @media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation-duration:.01ms!important; transition-duration:.01ms!important; } }
+.gesture-modal { position:fixed; inset:0; z-index:120; display:grid; place-items:center; padding:1rem; background:rgba(2,4,7,.94); backdrop-filter:blur(8px); }
+.gesture-modal.hidden { display:none; }
+.gesture-window { width:min(720px,100%); max-height:96vh; overflow-y:auto; padding:clamp(1.2rem,4vw,2rem); background:#11161d; border:1px solid rgba(214,168,75,.35); box-shadow:0 30px 100px #000; text-align:center; }
+.gesture-password { display:inline-flex; align-items:center; gap:1rem; margin:1.25rem auto; padding:.8rem 1.2rem; color:#d6a84b; border:1px dashed rgba(214,168,75,.55); letter-spacing:.12em; }
+.gesture-password span { font-size:2.2rem; line-height:1; }
+.camera-frame { position:relative; width:min(520px,100%); aspect-ratio:4/3; margin:0 auto; overflow:hidden; background:#05070a; border:1px solid rgba(255,255,255,.12); }
+.camera-frame video { width:100%; height:100%; object-fit:cover; transform:scaleX(-1); }
+.camera-scan { position:absolute; inset:0; pointer-events:none; background:linear-gradient(transparent 49%,rgba(214,168,75,.28) 50%,transparent 51%); background-size:100% 80px; animation:cameraScan 2.4s linear infinite; }
+.camera-placeholder { position:absolute; inset:0; display:grid; place-items:center; padding:2rem; color:#78716c; font-size:.72rem; letter-spacing:.08em; }
+.camera-placeholder.hidden { display:none; }
+.gesture-meter { width:min(520px,100%); height:5px; margin:.8rem auto 0; background:rgba(255,255,255,.08); }
+#gestureMeterFill { width:0; height:100%; background:#d6a84b; box-shadow:0 0 12px #d6a84b; transition:width .12s linear; }
+.gesture-status { min-height:1.5rem; margin-top:.7rem; color:#d6d3d1; font-size:.75rem; font-weight:700; }
+.gesture-status.success { color:#6fce8c; }
+.gesture-status.error { color:#ef8b8b; }
+.gesture-actions { display:flex; justify-content:center; gap:.8rem; flex-wrap:wrap; margin-top:.7rem; }
+.gesture-skip { color:#78716c; font-size:.6rem; letter-spacing:.1em; padding:.7rem; text-decoration:underline; text-underline-offset:3px; }
+.privacy-note { color:#57534e; font-size:.58rem; margin-top:.7rem; }
+@keyframes cameraScan { from{background-position:0 -80px} to{background-position:0 80px} }

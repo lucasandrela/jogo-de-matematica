@@ -151,6 +151,21 @@
   </main>
 
   <!-- Manual pedagógico: pode ser consultado a qualquer momento, sem penalidade. -->
+  <!-- Segunda trava: a resposta correta revela uma senha feita com a mão. -->
+  <div id="gestureModal" class="gesture-modal hidden" role="dialog" aria-modal="true" aria-labelledby="gestureTitle">
+    <div class="gesture-window">
+      <p class="eyebrow">VERIFICAÇÃO BIOMÉTRICA // SEGUNDA TRAVA</p>
+      <h2 id="gestureTitle" class="font-display text-3xl text-paper mt-2">Repita a senha secreta</h2>
+      <p class="text-sm text-stone-400 mt-3">Mostre o gesto abaixo para a câmera e mantenha a mão parada por um instante.</p>
+      <div class="gesture-password"><span id="gestureEmoji" aria-hidden="true">✋</span><strong id="gestureName">PALMA ABERTA</strong></div>
+      <div class="camera-frame"><video id="gestureVideo" autoplay playsinline muted aria-label="Imagem da sua webcam"></video><div class="camera-scan" aria-hidden="true"></div><div id="cameraPlaceholder" class="camera-placeholder">A câmera será ativada aqui</div></div>
+      <div class="gesture-meter" aria-hidden="true"><div id="gestureMeterFill"></div></div>
+      <p id="gestureStatus" class="gesture-status" role="status" aria-live="polite">Preparando o leitor de gestos...</p>
+      <div class="gesture-actions"><button id="enableCameraBtn" class="unlock-btn hidden">ATIVAR CÂMERA</button><button id="skipGestureBtn" class="gesture-skip">NÃO POSSO USAR A CÂMERA</button></div>
+      <p class="privacy-note">O vídeo é analisado neste navegador e não é gravado nem enviado pelo jogo.</p>
+    </div>
+  </div>
+
   <div id="manualModal" class="manual-modal hidden" role="dialog" aria-modal="true" aria-labelledby="manualTitle">
     <div class="manual-backdrop" data-close-manual></div>
     <section class="manual-window">

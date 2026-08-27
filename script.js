@@ -104,6 +104,20 @@ const METHOD_NAMES = ['Adição', 'Adição', 'Substituição', 'Classificação
 let state = { level: 0, score: 1000, seconds: 0, hints: [], started: false };
 let timerId = null;
 
+const GESTURE_PASSWORDS = [
+  { id: 'Open_Palm', name: 'PALMA ABERTA', emoji: '✋' },
+  { id: 'Thumb_Up', name: 'POSITIVO', emoji: '👍' },
+  { id: 'Victory', name: 'SINAL DE VITÓRIA', emoji: '✌️' },
+  { id: 'Closed_Fist', name: 'PUNHO FECHADO', emoji: '✊' },
+  { id: 'Pointing_Up', name: 'INDICADOR PARA CIMA', emoji: '☝️' }
+];
+let gestureRecognizer = null;
+let cameraStream = null;
+let gestureLoopId = null;
+let lastVideoTime = -1;
+let matchingFrames = 0;
+let gestureChallengeActive = false;
+
 // Normaliza a resposta para aceitar maiúsculas, espaços e vírgulas sem frustrar o jogador.
 function normalize(value) { return value.trim().toLowerCase().replace(/\s+/g, '').replace(',', '.'); }
 
@@ -182,6 +196,7 @@ function beginGame(continueSaved = false) {
 
 // Valida a senha; erro custa 25 pontos e acerto avança após uma breve confirmação.
 function submitAnswer() {
+  if (gestureChallengeActive) return;
   const typed = normalize(elements.input.value);
   if (!typed) { elements.feedback.textContent = 'Digite um código antes de tentar desbloquear.'; elements.feedback.classList.add('error'); return; }
   const correct = LEVELS[state.level].answers.some(answer => normalize(answer) === typed);
@@ -193,11 +208,105 @@ function submitAnswer() {
   elements.feedback.textContent = 'ACESSO LIBERADO — evidência recuperada.';
   elements.feedback.className = 'feedback min-h-6 mt-3 success';
   elements.input.disabled = true; $('#submitBtn').disabled = true;
+  elements.feedback.textContent = 'CÓDIGO CORRETO — confirme agora a senha por gesto.';
+  setTimeout(openGestureChallenge, 500);
+}
+
+async function createGestureRecognizer() {
+  if (gestureRecognizer) return gestureRecognizer;
+  const vision = await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22-rc.20250304/vision_bundle.mjs');
+  const files = await vision.FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22-rc.20250304/wasm');
+  gestureRecognizer = await vision.GestureRecognizer.createFromOptions(files, {
+    baseOptions: {
+      modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task',
+      delegate: 'GPU'
+    },
+    runningMode: 'VIDEO', numHands: 1,
+    minHandDetectionConfidence: 0.55, minHandPresenceConfidence: 0.55,
+    cannedGesturesClassifierOptions: { scoreThreshold: 0.65 }
+  });
+  return gestureRecognizer;
+}
+
+async function openGestureChallenge() {
+  gestureChallengeActive = true;
+  matchingFrames = 0; lastVideoTime = -1;
+  const password = GESTURE_PASSWORDS[state.level % GESTURE_PASSWORDS.length];
+  $('#gestureEmoji').textContent = password.emoji;
+  $('#gestureName').textContent = password.name;
+  $('#gestureMeterFill').style.width = '0%';
+  $('#gestureModal').classList.remove('hidden');
+  $('#gestureStatus').className = 'gesture-status';
+  $('#gestureStatus').textContent = 'Preparando o leitor de gestos...';
+  $('#enableCameraBtn').classList.add('hidden');
+  try { await startGestureCamera(); } catch (error) { showCameraError(error); }
+}
+
+async function startGestureCamera() {
+  if (!navigator.mediaDevices?.getUserMedia) throw new Error('unsupported');
+  $('#enableCameraBtn').classList.add('hidden');
+  $('#gestureStatus').textContent = 'Carregando o reconhecimento...';
+  const recognizerPromise = createGestureRecognizer();
+  cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 } }, audio: false });
+  const video = $('#gestureVideo');
+  video.srcObject = cameraStream;
+  await Promise.all([recognizerPromise, new Promise(resolve => video.addEventListener('loadeddata', resolve, { once: true }))]);
+  $('#cameraPlaceholder').classList.add('hidden');
+  $('#gestureStatus').textContent = 'Mostre a mão inteira para a câmera.';
+  detectGesture();
+}
+
+function detectGesture() {
+  if (!gestureChallengeActive || !cameraStream) return;
+  const video = $('#gestureVideo');
+  if (video.readyState >= 2 && video.currentTime !== lastVideoTime) {
+    lastVideoTime = video.currentTime;
+    const result = gestureRecognizer.recognizeForVideo(video, performance.now());
+    const detected = result.gestures?.[0]?.[0];
+    const target = GESTURE_PASSWORDS[state.level % GESTURE_PASSWORDS.length];
+    if (detected?.categoryName === target.id) {
+      matchingFrames++;
+      $('#gestureStatus').textContent = `Gesto correto: ${target.name}. Mantenha a posição...`;
+    } else {
+      matchingFrames = Math.max(0, matchingFrames - 2);
+      $('#gestureStatus').textContent = detected && detected.categoryName !== 'None' ? 'Gesto diferente da senha. Tente novamente.' : 'Mostre a mão inteira para a câmera.';
+    }
+    $('#gestureMeterFill').style.width = `${Math.min(100, matchingFrames * 10)}%`;
+    if (matchingFrames >= 10) { completeGestureChallenge(); return; }
+  }
+  gestureLoopId = requestAnimationFrame(detectGesture);
+}
+
+function showCameraError(error) {
+  console.warn('Não foi possível iniciar a câmera:', error);
+  stopGestureCamera();
+  $('#gestureStatus').className = 'gesture-status error';
+  $('#gestureStatus').textContent = location.protocol === 'file:' ? 'A câmera exige localhost ou HTTPS. Abra o projeto por um servidor local.' : 'Não foi possível acessar a câmera. Verifique a permissão do navegador.';
+  $('#cameraPlaceholder').classList.remove('hidden');
+  $('#cameraPlaceholder').textContent = 'Câmera indisponível';
+  $('#enableCameraBtn').classList.remove('hidden');
+}
+
+function stopGestureCamera() {
+  cancelAnimationFrame(gestureLoopId);
+  gestureLoopId = null;
+  cameraStream?.getTracks().forEach(track => track.stop());
+  cameraStream = null;
+  $('#gestureVideo').srcObject = null;
+}
+
+function completeGestureChallenge(skipped = false) {
+  if (!gestureChallengeActive) return;
+  gestureChallengeActive = false;
+  stopGestureCamera();
+  $('#gestureStatus').className = 'gesture-status success';
+  $('#gestureStatus').textContent = skipped ? 'Modo sem câmera ativado.' : 'IDENTIDADE CONFIRMADA — segunda trava liberada.';
   setTimeout(() => {
+    $('#gestureModal').classList.add('hidden');
     state.level++;
     elements.input.disabled = false; $('#submitBtn').disabled = false;
     if (state.level >= LEVELS.length) finishGame(); else renderLevel();
-  }, 900);
+  }, 800);
 }
 
 function revealHint() {
@@ -241,6 +350,10 @@ $('#learnBtn').addEventListener('click', () => openManual('basics'));
 $('#levelManualBtn').addEventListener('click', () => openManual(LEVEL_LESSONS[state.level]));
 $('#closeManualBtn').addEventListener('click', closeManual);
 $('#closeManualFooterBtn').addEventListener('click', closeManual);
+$('#enableCameraBtn').addEventListener('click', () => startGestureCamera().catch(showCameraError));
+$('#skipGestureBtn').addEventListener('click', () => {
+  if (confirm('Continuar sem validar o gesto? Use esta opção apenas se a câmera não estiver disponível.')) completeGestureChallenge(true);
+});
 document.querySelector('[data-close-manual]').addEventListener('click', closeManual);
 document.addEventListener('keydown', event => { if (event.key === 'Escape') closeManual(); });
 
