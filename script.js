@@ -93,7 +93,7 @@ const elements = {
   intro: $('#introScreen'), game: $('#gameScreen'), victory: $('#victoryScreen'),
   timer: $('#timer'), score: $('#score'), progress: $('#progressBar'), levelNumber: $('#levelNumber'),
   rank: $('#rankLabel'), code: $('#levelCode'), title: $('#levelTitle'), difficulty: $('#difficulty'),
-  narrative: $('#narrative'), problem: $('#problem'), system: $('#systemBox'), objective: $('#objective'),
+  narrative: $('#narrative'), problem: $('#problem'), system: $('#systemBox'), systemHintBtn: $('#systemHintBtn'), objective: $('#objective'),
   input: $('#answerInput'), feedback: $('#feedback'), hint: $('#hintBox'), hintBtn: $('#hintBtn'),
   dots: $('#evidenceDots'), continueBtn: $('#continueBtn')
 };
@@ -101,7 +101,7 @@ const elements = {
 const LEVEL_LESSONS = ['addition', 'addition', 'substitution', 'classification', 'addition', 'substitution', 'three', 'three', 'cramer', 'three'];
 const METHOD_NAMES = ['Adição', 'Adição', 'Substituição', 'Classificação de sistemas', 'Adição', 'Substituição', 'Substituição em 3 × 3', 'Escalonamento', 'Determinante / Sarrus', 'Sistema 3 × 3'];
 
-let state = { level: 0, score: 1000, seconds: 0, hints: [], started: false };
+let state = { level: 0, score: 1000, seconds: 0, hints: [], systemHints: [], started: false };
 let timerId = null;
 
 const GESTURE_PASSWORDS = [
@@ -164,6 +164,12 @@ function renderLevel() {
   elements.narrative.textContent = level.narrative;
   elements.problem.textContent = level.problem;
   elements.system.textContent = level.system;
+  const systemRevealed = state.systemHints.includes(state.level);
+  elements.system.classList.toggle('hidden', !systemRevealed);
+  elements.systemHintBtn.disabled = systemRevealed;
+  elements.systemHintBtn.innerHTML = systemRevealed
+    ? 'SISTEMA REVELADO'
+    : 'VER SISTEMA (DICA) <span>−50 pts</span>';
   elements.objective.textContent = level.objective;
   $('#methodLabel').textContent = METHOD_NAMES[state.level];
   elements.progress.style.width = `${(state.level + 1) * 10}%`;
@@ -188,8 +194,10 @@ function beginGame(continueSaved = false) {
   if (continueSaved) {
     try { state = { ...state, ...JSON.parse(localStorage.getItem('detetiveEscapeSave')) }; } catch (_) { /* novo jogo */ }
   } else {
-    state = { level: 0, score: 1000, seconds: 0, hints: [], started: true };
+    state = { level: 0, score: 1000, seconds: 0, hints: [], systemHints: [], started: true };
   }
+  state.hints = Array.isArray(state.hints) ? state.hints : [];
+  state.systemHints = Array.isArray(state.systemHints) ? state.systemHints : [];
   state.started = true;
   showScreen('game'); renderLevel(); startTimer();
 }
@@ -316,6 +324,17 @@ function revealHint() {
   elements.hintBtn.textContent = 'DICA REVELADA'; updateStatus(); saveGame();
 }
 
+function revealSystemHint() {
+  if (state.systemHints.includes(state.level)) return;
+  state.systemHints.push(state.level);
+  state.score = Math.max(0, state.score - 50);
+  elements.system.classList.remove('hidden');
+  elements.systemHintBtn.disabled = true;
+  elements.systemHintBtn.textContent = 'SISTEMA REVELADO';
+  updateStatus();
+  saveGame();
+}
+
 function finishGame() {
   clearInterval(timerId); state.started = false; localStorage.removeItem('detetiveEscapeSave');
   $('#finalTime').textContent = formatTime(state.seconds); $('#finalScore').textContent = state.score;
@@ -343,6 +362,7 @@ elements.continueBtn.addEventListener('click', () => beginGame(true));
 $('#submitBtn').addEventListener('click', submitAnswer);
 elements.input.addEventListener('keydown', event => { if (event.key === 'Enter') submitAnswer(); });
 elements.hintBtn.addEventListener('click', revealHint);
+elements.systemHintBtn.addEventListener('click', revealSystemHint);
 $('#resetBtn').addEventListener('click', resetGame);
 $('#playAgainBtn').addEventListener('click', () => beginGame(false));
 $('#manualBtn').addEventListener('click', () => openManual('basics'));

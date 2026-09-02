@@ -29,6 +29,14 @@ body { background: radial-gradient(circle at 20% 10%, #18202a 0, #080b10 38%, #0
 .clue-box { border-left: 3px solid #9b2f2f; background: rgba(255,255,255,.3); padding: 1.1rem 1.3rem; }
 .clue-label, .panel-title { font-size: .62rem; font-weight: 800; letter-spacing: .2em; color: #8a2525; }
 .system-box { margin-top: 1.4rem; padding: 1.2rem; color: #111; font-size: 1.05rem; font-weight: 700; border: 1px dashed rgba(20,20,20,.3); white-space: pre-line; line-height: 1.8; text-align: center; }
+.system-box.hidden { display: none; }
+.system-hint-area { margin-top: 1.4rem; }
+.system-hint-label { color: #57534e; font-size: .68rem; text-align: center; }
+.system-hint-area .system-box { margin-top: .7rem; }
+.system-hint-btn { display: block; width: 100%; margin-top: .7rem; border: 1px solid rgba(138,37,37,.4); color: #7f1d1d; padding: .7rem; font-size: .65rem; font-weight: 800; letter-spacing: .08em; transition: .2s; }
+.system-hint-btn span { color: #78716c; }
+.system-hint-btn:hover:not(:disabled) { background: rgba(155,47,47,.08); }
+.system-hint-btn:disabled { opacity: .55; cursor: default; }
 .answer-input { flex: 1; min-width: 0; background: rgba(255,255,255,.45); border: 1px solid rgba(0,0,0,.3); padding: .9rem 1rem; color: #111; outline: none; font-weight: 700; }
 .answer-input:focus { border-color: #9b2f2f; box-shadow: 0 0 0 2px rgba(155,47,47,.12); }
 .feedback { font-size: .75rem; font-weight: 700; }
